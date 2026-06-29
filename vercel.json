@@ -5,14 +5,14 @@
   "framework": "vite",
   "regions": ["iad1"],
   "env": {
-    "DATABASE_URL": {
-      "description": "MySQL database connection string"
+    "SUPABASE_URL": {
+      "description": "Supabase project URL"
     },
-    "JWT_SECRET": {
-      "description": "JWT secret for token signing"
+    "SUPABASE_PUBLISHABLE_KEY": {
+      "description": "Supabase anon/public key"
     },
-    "OAUTH_SERVER_URL": {
-      "description": "OAuth server URL"
+    "SUPABASE_SECRET_KEY": {
+      "description": "Supabase service role key"
     }
   },
   "headers": [
