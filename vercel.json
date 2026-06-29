@@ -4,17 +4,6 @@
   "installCommand": "pnpm install",
   "framework": "vite",
   "regions": ["iad1"],
-  "env": {
-    "SUPABASE_URL": {
-      "description": "Supabase project URL"
-    },
-    "SUPABASE_PUBLISHABLE_KEY": {
-      "description": "Supabase anon/public key"
-    },
-    "SUPABASE_SECRET_KEY": {
-      "description": "Supabase service role key"
-    }
-  },
   "headers": [
     {
       "source": "/(.*)",
@@ -39,4 +28,3 @@
     }
   ]
 }
- 
