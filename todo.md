@@ -2,9 +2,9 @@
 
 ## Phase 1: Core Setup & Authentication
 - [x] Set up Supabase integration with environment variables
-- [ ] Implement Supabase Auth (signup/login/logout)
+- [x] Implement Supabase Auth (signup/login/logout)
 - [x] Create user session management with useAuth hook
-- [ ] Set up database schema (cameras, events tables with RLS)
+- [x] Set up database schema (cameras, events tables with RLS)
 - [x] Implement protected routes and auth guards
 
 ## Phase 2: Landing Page & Hero
@@ -36,7 +36,7 @@
 - [x] Add searchable/filterable event log
 - [x] Implement severity levels (low, medium, high)
 - [x] Create alert notifications UI
-- [ ] Add event details modal/drawer
+- [x] Add event details modal/drawer
 
 ## Phase 6: Camera Management
 - [x] Create camera list/grid view
@@ -44,46 +44,46 @@
 - [x] Implement delete camera functionality
 - [x] Show camera status (online/offline)
 - [x] Display last seen timestamp
-- [ ] Add camera details/settings view
+- [x] Add camera details/settings view
 
 ## Phase 7: Broadcast Mode
 - [x] Create "Turn this device into a camera" mode
 - [x] Implement broadcast status indicator
 - [x] Add broadcast controls (start/stop)
-- [ ] Store broadcast state in Supabase
-- [ ] Create broadcast settings (name, location, type)
+- [x] Store broadcast state in Supabase
+- [x] Create broadcast settings (name, location, type)
 
 ## Phase 8: Share Live Feeds
-- [ ] Implement secure shareable links generation
-- [ ] Create share modal with link copy
-- [ ] Add QR code generation for sharing
-- [ ] Implement share link expiration/management
-- [ ] Create shared view for public access
+- [x] Implement secure shareable links generation
+- [x] Create share modal with link copy
+- [x] Add QR code generation for sharing
+- [x] Implement share link expiration/management
+- [x] Create shared view for public access
 
 ## Phase 9: Billing & Plans
 - [x] Create billing page with Free/Pro/Enterprise plans
 - [x] Implement plan comparison table
 - [x] Add upgrade functionality (demo mode)
-- [ ] Display current plan status
-- [ ] Add plan features list
-- [ ] Implement subscription management UI
+- [x] Display current plan status
+- [x] Add plan features list
+- [x] Implement subscription management UI
 
 ## Phase 10: UI/UX Polish
 - [x] Implement dark theme throughout app
 - [x] Add smooth animations and transitions
 - [x] Create toast notifications for actions
-- [ ] Implement loading states and skeletons
+- [x] Implement loading states and skeletons
 - [x] Add error handling and user feedback
 - [x] Ensure fully responsive design (mobile-first)
-- [ ] Test PWA capabilities
+- [x] Test PWA capabilities
 
 ## Phase 11: Database & Supabase Integration
-- [ ] Create Supabase project and tables
-- [ ] Implement Row Level Security (RLS) policies
-- [ ] Create server-side API routes with @supabase/server
-- [ ] Implement data persistence for cameras/events
-- [ ] Add real-time subscriptions (optional)
-- [ ] Set up Supabase Storage for snapshots/clips (optional)
+- [x] Create Supabase project and tables
+- [x] Implement Row Level Security (RLS) policies
+- [x] Create server-side API routes with @supabase/server
+- [x] Implement data persistence for cameras/events
+- [x] Add real-time subscriptions (optional)
+- [x] Set up Supabase Storage for snapshots/clips (optional)
 
 ## Phase 12: Testing & Deployment
 - [x] Write vitest unit tests for core functions
@@ -96,10 +96,10 @@
 - [x] Document deployment instructions
 
 ## Phase 13: Final Polish & Delivery
-- [ ] Review and refine all UI components
-- [ ] Optimize performance and bundle size
-- [ ] Add accessibility features (ARIA labels, keyboard navigation)
-- [ ] Create comprehensive README
-- [ ] Add deployment guide
-- [ ] Create checkpoint for delivery
-- [ ] Prepare for GitHub push and Vercel deployment
+- [x] Review and refine all UI components
+- [x] Optimize performance and bundle size
+- [x] Add accessibility features (ARIA labels, keyboard navigation)
+- [x] Create comprehensive README
+- [x] Add deployment guide
+- [x] Create checkpoint for delivery
+- [x] Prepare for GitHub push and Vercel deployment

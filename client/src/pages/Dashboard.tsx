@@ -5,6 +5,7 @@ import { Camera, Plus, Settings, LogOut, AlertCircle, Clock, Share2, Moon } from
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { PushToTalk } from "@/components/PushToTalk";
+import { ShareModal } from "@/components/ShareModal";
 
 interface CameraDevice {
   id: string;
@@ -34,6 +35,8 @@ export default function Dashboard() {
   const [cameraName, setCameraName] = useState("");
   const [cameraLocation, setCameraLocation] = useState("");
   const [alertFilter, setAlertFilter] = useState<"all" | "high" | "medium" | "low">("all");
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [selectedCamera, setSelectedCamera] = useState<CameraDevice | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [nightVisionEnabled, setNightVisionEnabled] = useState(false);
@@ -379,6 +382,10 @@ export default function Dashboard() {
                       <Button
                         size="sm"
                         variant="outline"
+                        onClick={() => {
+                          setSelectedCamera(camera);
+                          setShareModalOpen(true);
+                        }}
                         className="flex-1 border-slate-600 text-white hover:bg-slate-700"
                       >
                         <Share2 className="w-4 h-4 mr-1" />
@@ -580,6 +587,18 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {selectedCamera && (
+        <ShareModal
+          isOpen={shareModalOpen}
+          onClose={() => {
+            setShareModalOpen(false);
+            setSelectedCamera(null);
+          }}
+          cameraName={selectedCamera.name}
+          cameraId={selectedCamera.id}
+        />
+      )}
     </div>
   );
 }
