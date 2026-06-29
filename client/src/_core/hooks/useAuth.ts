@@ -1,7 +1,6 @@
-import { getLoginUrl } from "@/const";
-import { trpc } from "@/lib/trpc";
-import { TRPCClientError } from "@trpc/client";
-import { useCallback, useEffect, useMemo } from "react";
+import { useEffect, useState, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
+import type { User } from '@supabase/supabase-js';
 
 type UseAuthOptions = {
   redirectOnUnauthenticated?: boolean;
@@ -9,82 +8,120 @@ type UseAuthOptions = {
 };
 
 export function useAuth(options?: UseAuthOptions) {
-  const { redirectOnUnauthenticated = false, redirectPath = getLoginUrl() } =
-    options ?? {};
-  const utils = trpc.useUtils();
+  const { redirectOnUnauthenticated = false, redirectPath = '/login' } = options ?? {};
+  
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  const meQuery = trpc.auth.me.useQuery(undefined, {
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
-
-  const logoutMutation = trpc.auth.logout.useMutation({
-    onSuccess: () => {
-      utils.auth.me.setData(undefined, null);
-    },
-  });
-
-  const logout = useCallback(async () => {
-    try {
-      await logoutMutation.mutateAsync();
-    } catch (error: unknown) {
-      if (
-        error instanceof TRPCClientError &&
-        error.data?.code === "UNAUTHORIZED"
-      ) {
-        return;
-      }
-      throw error;
-    } finally {
-      // Clear the Preview auto-login token mirrored into sessionStorage, so
-      // header-based sessions (Safari ITP / WebView) are logged out too. The
-      // backend cookie is cleared by the logout mutation.
-      try {
-        sessionStorage.removeItem("manus-cookie");
-      } catch {}
-      utils.auth.me.setData(undefined, null);
-      await utils.auth.me.invalidate();
-    }
-  }, [logoutMutation, utils]);
-
-  const state = useMemo(() => {
-    localStorage.setItem(
-      "manus-runtime-user-info",
-      JSON.stringify(meQuery.data)
-    );
-    return {
-      user: meQuery.data ?? null,
-      loading: meQuery.isLoading || logoutMutation.isPending,
-      error: meQuery.error ?? logoutMutation.error ?? null,
-      isAuthenticated: Boolean(meQuery.data),
-    };
-  }, [
-    meQuery.data,
-    meQuery.error,
-    meQuery.isLoading,
-    logoutMutation.error,
-    logoutMutation.isPending,
-  ]);
-
+  // Get initial session + listen for auth changes
   useEffect(() => {
-    if (!redirectOnUnauthenticated) return;
-    if (meQuery.isLoading || logoutMutation.isPending) return;
-    if (state.user) return;
-    if (typeof window === "undefined") return;
-    if (window.location.pathname === redirectPath) return;
+    let isMounted = true;
 
-    window.location.href = redirectPath
-  }, [
-    redirectOnUnauthenticated,
-    redirectPath,
-    logoutMutation.isPending,
-    meQuery.isLoading,
-    state.user,
-  ]);
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (isMounted) {
+          if (error) {
+            setError(error);
+          } else {
+            setUser(session?.user ?? null);
+          }
+          setLoading(false);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err as Error);
+          setLoading(false);
+        }
+      }
+    };
+
+    getInitialSession();
+
+    // Listen for auth state changes (login, logout, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (isMounted) {
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
+      }
+    );
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // Optional redirect if user is not logged in
+  useEffect(() => {
+    if (!redirectOnUnauthenticated || loading) return;
+    if (user) return;
+    if (typeof window === 'undefined') return;
+
+    window.location.href = redirectPath;
+  }, [user, loading, redirectOnUnauthenticated, redirectPath]);
+
+  // Sign in with email + password
+  const signIn = useCallback(async (email: string, password: string) => {
+    setLoading(true);
+    setError(null);
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      setError(error);
+      setLoading(false);
+      throw error;
+    }
+  }, []);
+
+  // Sign up with email + password
+  const signUp = useCallback(async (email: string, password: string, name?: string) => {
+    setLoading(true);
+    setError(null);
+
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { name: name || '' }
+      }
+    });
+
+    if (error) {
+      setError(error);
+      setLoading(false);
+      throw error;
+    }
+  }, []);
+
+  // Sign out
+  const signOut = useCallback(async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      setError(error);
+    }
+    setLoading(false);
+  }, []);
+
+  const refresh = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    setUser(session?.user ?? null);
+  }, []);
 
   return {
-    ...state,
-    refresh: () => meQuery.refetch(),
-    logout,
+    user,
+    loading,
+    error,
+    isAuthenticated: !!user,
+    signIn,
+    signUp,
+    signOut,
+    refresh,
   };
 }
