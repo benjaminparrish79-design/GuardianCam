@@ -6,49 +6,63 @@ import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { PushToTalk } from "@/components/PushToTalk";
 import { ShareModal } from "@/components/ShareModal";
-
-interface CameraDevice {
-  id: string;
-  name: string;
-  location: string;
-  status: "online" | "offline";
-  lastSeen: Date;
-  type: string;
-}
-
-interface AlertEvent {
-  id: string;
-  cameraName: string;
-  type: string;
-  severity: "low" | "medium" | "high";
-  time: Date;
-  description: string;
-}
+import { trpc } from "@/lib/trpc";
 
 export default function Dashboard() {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
-  const [cameras, setCameras] = useState<CameraDevice[]>([]);
-  const [alerts, setAlerts] = useState<AlertEvent[]>([]);
+  const utils = trpc.useUtils();
+
+  // ---- Cameras (trpc) ----
+  const camerasQuery = trpc.cameras.list.useQuery();
+  const createCameraMutation = trpc.cameras.create.useMutation({
+    onSuccess: () => {
+      utils.cameras.list.invalidate();
+      toast.success("Camera added successfully");
+      setCameraName("");
+      setCameraLocation("");
+      setShowAddCamera(false);
+    },
+    onError: (err) => toast.error(err.message || "Failed to add camera"),
+  });
+  const deleteCameraMutation = trpc.cameras.delete.useMutation({
+    onSuccess: () => {
+      utils.cameras.list.invalidate();
+      toast.success("Camera deleted");
+    },
+    onError: (err) => toast.error(err.message || "Failed to delete camera"),
+  });
+
+  const cameras = camerasQuery.data ?? [];
+
+  // ---- Events / Alerts (trpc) ----
+  const [alertFilter, setAlertFilter] = useState<"all" | "high" | "medium" | "low">("all");
+  const eventsQuery = trpc.events.list.useQuery({
+    severity: alertFilter === "all" ? undefined : alertFilter,
+    limit: 50,
+    offset: 0,
+  });
+  const createEventMutation = trpc.events.create.useMutation({
+    onSuccess: (data) => {
+      utils.events.list.invalidate();
+      toast.success(`Motion alert: ${data.description ?? "New event"}`);
+    },
+    onError: (err) => toast.error(err.message || "Failed to create alert"),
+  });
+
+  const alerts = eventsQuery.data?.events ?? [];
+
   const [activeTab, setActiveTab] = useState<"cameras" | "alerts" | "broadcast">("cameras");
   const [showAddCamera, setShowAddCamera] = useState(false);
   const [cameraName, setCameraName] = useState("");
   const [cameraLocation, setCameraLocation] = useState("");
-  const [alertFilter, setAlertFilter] = useState<"all" | "high" | "medium" | "low">("all");
   const [shareModalOpen, setShareModalOpen] = useState(false);
-  const [selectedCamera, setSelectedCamera] = useState<CameraDevice | null>(null);
+  const [selectedCamera, setSelectedCamera] = useState<(typeof cameras)[number] | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [nightVisionEnabled, setNightVisionEnabled] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number | undefined>(undefined);
-
-  // Redirect to landing if not authenticated
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setLocation("/");
-    }
-  }, [isAuthenticated, setLocation]);
 
   // Initialize webcam
   useEffect(() => {
@@ -109,23 +123,19 @@ export default function Dashboard() {
     const drawFrame = () => {
       ctx.drawImage(videoRef.current!, 0, 0, canvas.width, canvas.height);
 
-      // Get image data
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
 
-      // Apply green thermal effect
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
 
-        // Convert to grayscale
         const gray = r * 0.299 + g * 0.587 + b * 0.114;
 
-        // Apply green thermal effect
-        data[i] = Math.max(0, gray - 50); // Red
-        data[i + 1] = gray; // Green (bright)
-        data[i + 2] = Math.max(0, gray - 100); // Blue
+        data[i] = Math.max(0, gray - 50);
+        data[i + 1] = gray;
+        data[i + 2] = Math.max(0, gray - 100);
       }
 
       ctx.putImageData(imageData, 0, 0);
@@ -144,25 +154,15 @@ export default function Dashboard() {
       return;
     }
 
-    const newCamera: CameraDevice = {
-      id: Date.now().toString(),
+    createCameraMutation.mutate({
       name: cameraName,
       location: cameraLocation,
-      status: "online",
-      lastSeen: new Date(),
       type: "Phone Camera",
-    };
-
-    setCameras([...cameras, newCamera]);
-    setCameraName("");
-    setCameraLocation("");
-    setShowAddCamera(false);
-    toast.success("Camera added successfully");
+    });
   };
 
   const deleteCamera = (id: string) => {
-    setCameras(cameras.filter((c) => c.id !== id));
-    toast.success("Camera deleted");
+    deleteCameraMutation.mutate({ id });
   };
 
   const simulateMotionAlert = () => {
@@ -172,17 +172,18 @@ export default function Dashboard() {
     }
 
     const randomCamera = cameras[Math.floor(Math.random() * cameras.length)];
-    const alert: AlertEvent = {
-      id: Date.now().toString(),
+    const severity = ["low", "medium", "high"][Math.floor(Math.random() * 3)] as
+      | "low"
+      | "medium"
+      | "high";
+
+    createEventMutation.mutate({
+      cameraId: randomCamera.id,
       cameraName: randomCamera.name,
       type: "Motion Detected",
-      severity: ["low", "medium", "high"][Math.floor(Math.random() * 3)] as any,
-      time: new Date(),
       description: `Motion detected at ${randomCamera.location}`,
-    };
-
-    setAlerts([alert, ...alerts]);
-    toast.success(`Motion alert: ${alert.description}`);
+      severity,
+    });
   };
 
   const takeSnapshot = () => {
@@ -221,7 +222,7 @@ export default function Dashboard() {
     };
 
     mediaRecorder.start();
-    setTimeout(() => mediaRecorder.stop(), 10000); // Record for 10 seconds
+    setTimeout(() => mediaRecorder.stop(), 10000);
   };
 
   const handleLogout = async () => {
@@ -232,10 +233,6 @@ export default function Dashboard() {
       console.error("Logout failed:", err);
     }
   };
-
-  if (!isAuthenticated) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white">
@@ -334,9 +331,10 @@ export default function Dashboard() {
                   <div className="flex gap-4">
                     <Button
                       onClick={addCamera}
+                      disabled={createCameraMutation.isPending}
                       className="bg-cyan-500 hover:bg-cyan-600"
                     >
-                      Add Camera
+                      {createCameraMutation.isPending ? "Adding..." : "Add Camera"}
                     </Button>
                     <Button
                       variant="outline"
@@ -350,7 +348,17 @@ export default function Dashboard() {
               </div>
             )}
 
-            {cameras.length === 0 ? (
+            {camerasQuery.isLoading ? (
+              <div className="text-center py-12 bg-slate-800/30 rounded-lg border border-slate-700">
+                <p className="text-slate-400">Loading cameras...</p>
+              </div>
+            ) : camerasQuery.isError ? (
+              <div className="text-center py-12 bg-slate-800/30 rounded-lg border border-red-700">
+                <p className="text-red-400">
+                  Failed to load cameras: {camerasQuery.error.message}
+                </p>
+              </div>
+            ) : cameras.length === 0 ? (
               <div className="text-center py-12 bg-slate-800/30 rounded-lg border border-slate-700">
                 <Camera className="w-12 h-12 text-slate-500 mx-auto mb-4" />
                 <p className="text-slate-400">No cameras added yet</p>
@@ -376,7 +384,10 @@ export default function Dashboard() {
                     </div>
                     <p className="text-slate-400 text-sm mb-2">{camera.location}</p>
                     <p className="text-slate-500 text-xs mb-4">
-                      Last seen: {camera.lastSeen.toLocaleTimeString()}
+                      Last seen:{" "}
+                      {camera.last_seen
+                        ? new Date(camera.last_seen).toLocaleTimeString()
+                        : "Never"}
                     </p>
                     <div className="flex gap-2">
                       <Button
@@ -395,6 +406,7 @@ export default function Dashboard() {
                         size="sm"
                         variant="outline"
                         onClick={() => deleteCamera(camera.id)}
+                        disabled={deleteCameraMutation.isPending}
                         className="flex-1 border-red-600 text-red-400 hover:bg-red-500/10"
                       >
                         Delete
@@ -414,6 +426,7 @@ export default function Dashboard() {
               <h2 className="text-2xl font-bold">Motion Alerts & History</h2>
               <Button
                 onClick={simulateMotionAlert}
+                disabled={createEventMutation.isPending}
                 className="bg-orange-500 hover:bg-orange-600"
               >
                 <AlertCircle className="w-4 h-4 mr-2" />
@@ -421,71 +434,77 @@ export default function Dashboard() {
               </Button>
             </div>
 
-            {alerts.length > 0 && (
-              <div className="mb-6 flex gap-2 flex-wrap">
-                <button
-                  onClick={() => setAlertFilter("all")}
-                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                    alertFilter === "all"
-                      ? "bg-cyan-500 text-white"
-                      : "bg-slate-700 hover:bg-slate-600 text-slate-300"
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setAlertFilter("high")}
-                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                    alertFilter === "high"
-                      ? "bg-red-500 text-white"
-                      : "bg-red-500/20 text-red-400 hover:bg-red-500/30"
-                  }`}
-                >
-                  High
-                </button>
-                <button
-                  onClick={() => setAlertFilter("medium")}
-                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                    alertFilter === "medium"
-                      ? "bg-yellow-500 text-white"
-                      : "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30"
-                  }`}
-                >
-                  Medium
-                </button>
-                <button
-                  onClick={() => setAlertFilter("low")}
-                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                    alertFilter === "low"
-                      ? "bg-blue-500 text-white"
-                      : "bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
-                  }`}
-                >
-                  Low
-                </button>
-              </div>
-            )}
+            <div className="mb-6 flex gap-2 flex-wrap">
+              <button
+                onClick={() => setAlertFilter("all")}
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                  alertFilter === "all"
+                    ? "bg-cyan-500 text-white"
+                    : "bg-slate-700 hover:bg-slate-600 text-slate-300"
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setAlertFilter("high")}
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                  alertFilter === "high"
+                    ? "bg-red-500 text-white"
+                    : "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                }`}
+              >
+                High
+              </button>
+              <button
+                onClick={() => setAlertFilter("medium")}
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                  alertFilter === "medium"
+                    ? "bg-yellow-500 text-white"
+                    : "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30"
+                }`}
+              >
+                Medium
+              </button>
+              <button
+                onClick={() => setAlertFilter("low")}
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                  alertFilter === "low"
+                    ? "bg-blue-500 text-white"
+                    : "bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
+                }`}
+              >
+                Low
+              </button>
+            </div>
 
-            {alerts.length === 0 ? (
+            {eventsQuery.isLoading ? (
+              <div className="text-center py-12 bg-slate-800/30 rounded-lg border border-slate-700">
+                <p className="text-slate-400">Loading alerts...</p>
+              </div>
+            ) : eventsQuery.isError ? (
+              <div className="text-center py-12 bg-slate-800/30 rounded-lg border border-red-700">
+                <p className="text-red-400">
+                  Failed to load alerts: {eventsQuery.error.message}
+                </p>
+              </div>
+            ) : alerts.length === 0 ? (
               <div className="text-center py-12 bg-slate-800/30 rounded-lg border border-slate-700">
                 <Clock className="w-12 h-12 text-slate-500 mx-auto mb-4" />
                 <p className="text-slate-400">No alerts yet</p>
               </div>
             ) : (
               <div className="space-y-4">
-                {alerts
-                  .filter((alert) => alertFilter === "all" || alert.severity === alertFilter)
-                  .map((alert) => (
+                {alerts.map((alert) => (
                   <div
                     key={alert.id}
                     className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 hover:border-cyan-500/50 transition-colors"
                   >
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="font-semibold">{alert.cameraName}</h3>
+                        <h3 className="font-semibold">{alert.camera_name}</h3>
                         <p className="text-slate-400 text-sm">{alert.description}</p>
                         <p className="text-slate-500 text-xs mt-2">
-                          {alert.time.toLocaleString()}
+                          {new Date(alert.time).toLocaleString()}
                         </p>
                       </div>
                       <span
@@ -601,4 +620,4 @@ export default function Dashboard() {
       )}
     </div>
   );
-}
+                }
