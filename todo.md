@@ -24,16 +24,16 @@
 - [x] Add video controls (play, pause, fullscreen)
 
 ## Phase 4: Push-to-Talk & Audio
-- [ ] Implement push-to-talk button (hold to record)
-- [ ] Add audio recording with Web Audio API
-- [ ] Implement audio playback for recorded messages
-- [ ] Add audio feedback (beep on start/stop)
-- [ ] Create audio visualization during recording
+- [x] Implement push-to-talk button (hold to record)
+- [x] Add audio recording with Web Audio API
+- [x] Implement audio playback for recorded messages
+- [x] Add audio feedback (beep on start/stop)
+- [x] Create audio visualization during recording
 
 ## Phase 5: Motion Alerts & History
 - [x] Create motion alert simulation from live view
 - [x] Implement alerts history log with timestamps
-- [ ] Add searchable/filterable event log
+- [x] Add searchable/filterable event log
 - [x] Implement severity levels (low, medium, high)
 - [x] Create alert notifications UI
 - [ ] Add event details modal/drawer
@@ -61,20 +61,20 @@
 - [ ] Create shared view for public access
 
 ## Phase 9: Billing & Plans
-- [ ] Create billing page with Free/Pro/Enterprise plans
-- [ ] Implement plan comparison table
-- [ ] Add upgrade functionality (demo mode)
+- [x] Create billing page with Free/Pro/Enterprise plans
+- [x] Implement plan comparison table
+- [x] Add upgrade functionality (demo mode)
 - [ ] Display current plan status
 - [ ] Add plan features list
 - [ ] Implement subscription management UI
 
 ## Phase 10: UI/UX Polish
-- [ ] Implement dark theme throughout app
-- [ ] Add smooth animations and transitions
-- [ ] Create toast notifications for actions
+- [x] Implement dark theme throughout app
+- [x] Add smooth animations and transitions
+- [x] Create toast notifications for actions
 - [ ] Implement loading states and skeletons
-- [ ] Add error handling and user feedback
-- [ ] Ensure fully responsive design (mobile-first)
+- [x] Add error handling and user feedback
+- [x] Ensure fully responsive design (mobile-first)
 - [ ] Test PWA capabilities
 
 ## Phase 11: Database & Supabase Integration

@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { Camera, Plus, Settings, LogOut, AlertCircle, Clock, Share2, Moon } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
+import { PushToTalk } from "@/components/PushToTalk";
 
 interface CameraDevice {
   id: string;
@@ -32,6 +33,7 @@ export default function Dashboard() {
   const [showAddCamera, setShowAddCamera] = useState(false);
   const [cameraName, setCameraName] = useState("");
   const [cameraLocation, setCameraLocation] = useState("");
+  const [alertFilter, setAlertFilter] = useState<"all" | "high" | "medium" | "low">("all");
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [nightVisionEnabled, setNightVisionEnabled] = useState(false);
@@ -412,6 +414,51 @@ export default function Dashboard() {
               </Button>
             </div>
 
+            {alerts.length > 0 && (
+              <div className="mb-6 flex gap-2 flex-wrap">
+                <button
+                  onClick={() => setAlertFilter("all")}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                    alertFilter === "all"
+                      ? "bg-cyan-500 text-white"
+                      : "bg-slate-700 hover:bg-slate-600 text-slate-300"
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setAlertFilter("high")}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                    alertFilter === "high"
+                      ? "bg-red-500 text-white"
+                      : "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                  }`}
+                >
+                  High
+                </button>
+                <button
+                  onClick={() => setAlertFilter("medium")}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                    alertFilter === "medium"
+                      ? "bg-yellow-500 text-white"
+                      : "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30"
+                  }`}
+                >
+                  Medium
+                </button>
+                <button
+                  onClick={() => setAlertFilter("low")}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                    alertFilter === "low"
+                      ? "bg-blue-500 text-white"
+                      : "bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
+                  }`}
+                >
+                  Low
+                </button>
+              </div>
+            )}
+
             {alerts.length === 0 ? (
               <div className="text-center py-12 bg-slate-800/30 rounded-lg border border-slate-700">
                 <Clock className="w-12 h-12 text-slate-500 mx-auto mb-4" />
@@ -419,7 +466,9 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="space-y-4">
-                {alerts.map((alert) => (
+                {alerts
+                  .filter((alert) => alertFilter === "all" || alert.severity === alertFilter)
+                  .map((alert) => (
                   <div
                     key={alert.id}
                     className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 hover:border-cyan-500/50 transition-colors"
@@ -502,6 +551,8 @@ export default function Dashboard() {
                       ⏺️ Record (10s)
                     </Button>
                   </div>
+
+                  <PushToTalk />
 
                   <Button
                     onClick={stopWebcam}
